@@ -48,17 +48,6 @@ def test_short_url_properties(url):
     ), f"Expected short URL to contain 5 total digits and letters, but got '{short_url}'"
 
 
-def test_short_url_content(url):
-    """
-    Verifies that Url.generate_short_url() generates a URL suffix .
-    """
-    with testing_app.app_context():
-        short_url = url.generate_short_url()
-    assert set(short_url).issubset(
-        digits + ascii_letters
-    ), f"Expected short URL to contain ASCII letters and numbers only."
-
-
 @pytest.mark.parametrize("run", range(100))
 def test_short_url_no_duplicates(ten_thous_urls, run):
     """
