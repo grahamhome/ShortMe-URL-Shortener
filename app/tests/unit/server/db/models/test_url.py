@@ -1,59 +1,42 @@
 import re
 
 import pytest
+
+from app.app import app
 from app.server.db.models import Url
 from app.server.db.extensions import db
-from app.app import create_app
-from string import digits, ascii_letters
-
-
-testing_app = create_app(config_file="../tests/settings.py")
-
-
-@pytest.fixture
-def url():
-    """
-    Provides a URL instance for testing purposes.
-    """
-    with testing_app.app_context():
-        return Url(original_url="https://www.google.com")
 
 
 @pytest.fixture(scope="session")
-def ten_thous_urls():
+def ten_k_urls():
     """
-    Inserts 10K URL records into the DB for testing and deletes them after the test.
+    Inserts 10K new URL records into the test database and deletes them after the test.
     """
-    url = "https://www.10ktesturl.com"
-    with testing_app.app_context():
+    test_url = "https://www.10k-url-test.com"
+    with app.app_context():
         for _ in range(10_000):
-            test_url = Url(original_url=url)
-            db.session.add(test_url)
+            db.session.add(Url(original_url=test_url))
         db.session.commit()
         yield
-        db.session.query(Url).filter(Url.original_url == url).delete(
-            synchronize_session=False
-        )
+        # Cleanup after all tests run
+        db.session.query(Url).filter(Url.original_url == test_url).delete(synchronize_session=False)
         db.session.commit()
 
 
-def test_short_url_properties(url):
+def test_generate_short_url_properties():
     """
-    Verifies that Url.generate_short_url() generates a URL suffix of length 5 and containing only numbers and letters.
+    Verifies that Url.generate_short_url() generates a URL suffix of length 5 containing only letters and numbers.
     """
-    with testing_app.app_context():
-        short_url = url.generate_short_url()
-    assert re.match(
-        re.compile("^[a-zA-Z0-9]{5}$"), short_url
-    ), f"Expected short URL to contain 5 total digits and letters, but got '{short_url}'"
+    with app.app_context():
+        test_url = Url(original_url="https://www.wikipedia.org")
+    assert re.match(re.compile("^[a-zA-Z0-9]{5}$"), test_url.short_url), f"Expected short_url to contain only 5 total letters and digits, but got {test_url.short_url}"
 
 
 @pytest.mark.parametrize("run", range(100))
-def test_short_url_no_duplicates(ten_thous_urls, run):
+def test_generate_short_url_unique(ten_k_urls, run):
     """
-    Verifies that Url.generate_short_url() does not produce duplicate URL suffixes.
+    Verifies that Url.generate_short_url() generates a unique URL
     """
-    url = Url(original_url="https://www.google.com")
-    assert not Url.query.filter_by(
-        short_url=url.short_url
-    ).first(), "New Url objects must have unique short Url attribute."
+    with app.app_context():
+        test_url = Url(original_url="https://www.wikipedia.org")
+        assert not Url.query.filter(Url.short_url == test_url.short_url).first(), "New URL objects must have a unique short URL"
