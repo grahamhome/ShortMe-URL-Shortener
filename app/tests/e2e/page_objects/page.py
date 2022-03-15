@@ -17,7 +17,7 @@ class Page:
 
     def get_element(self, element):
         """
-        Given a tuple of (By, string), waits for the given element to be visible and returns it's Selenium representation.
+        Given a tuple of (By, string), waits for the given element to be visible and returns its Selenium representation.
         """
         try:
             WebDriverWait(self.driver, self.load_time).until(
